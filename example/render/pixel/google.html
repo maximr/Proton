@@ -11,13 +11,13 @@
 				overflow: hidden;
 			}
 			#container {
-				width: 1003px;
-				height: 610px;
-				margin-top: 50px;
-				margin-left: -501px;
-				left: 50%;
+				width: 100vw;
+				height: 100vh;
+				/*margin-top: 50px;
+				margin-left: -501px;*/
+				/*left: 50%;*/
 				position: absolute;
-				background: #000;
+				background: linear-gradient(to bottom, rgba(63,76,107,1) 0%,rgba(63,76,107,1) 100%);
 				overflow: hidden;
 			}
 
@@ -31,7 +31,7 @@
 		<div id="container">
 			<canvas id="testCanvas"></canvas>
 		</div>
-		<script src="../../lib/stats.min.js"></script>
+		<!-- <script src="../../lib/stats.min.js"></script> -->
 		<script src="../../../build/proton-2.1.0.min.js"></script>
 		<script src="js/PxLoader.js"></script>
 		<script src="js/PxLoaderImage.js"></script>
@@ -40,77 +40,84 @@
 			var canvas;
 			var context;
 			var renderer;
-			var stats;
 			var logoZone;
 			var emitter;
 			var imageDatas;
 			var rect, rect2;
-			var gravityBehaviour, randomBehaviour, gravityWellBehaviour;
+			var gravityBehaviour, randomBehaviour;
 			var rootIndex = 1;
+			var images = [];
+			var logo = [];
 
-			Main();
-			function Main() {
+			(function Main() {
 				canvas = document.getElementById("testCanvas");
-				canvas.width = 1003;
-				canvas.height = 610;
+				canvas.width = window.innerWidth;
+				canvas.height = window.innerHeight;
 				context = canvas.getContext('2d');
-				addStats();
+				images = ['google/logo1.png', 'google/logo2.png', 'google/logo3.png', 'google/logo4.png'];
 
 				imageDatas = [];
-				rect = new Proton.Rectangle((canvas.width - 455) / 2, (canvas.height - 200) / 2, 455, 200);
-				rect2 = new Proton.Rectangle(rect.x - 100, rect.y - 100, rect.width + 200, rect.height + 200);
-				randomBehaviour = new Proton.RandomDrift(0, 0, 0.05);
+
+				rect = new Proton.Rectangle(canvas.width/ 2, canvas.height / 2, 800, 800); //gets overwritten anyway...
+				rect2 = new Proton.Rectangle(0, 0, canvas.width, canvas.height);
+
+				randomBehaviour = new Proton.RandomDrift(30, 30, 0.001);
 				var rectZone = new Proton.RectZone(rect2.x, rect2.y, rect2.width, rect2.height);
 				crossBehaviour = new Proton.CrossZone(rectZone, 'bound');
-				gravityWellBehaviour = new Proton.GravityWell({
-					x : canvas.width / 2,
-					y : canvas.height / 2
-				}, 0, 0);
 
 				canvas.addEventListener('mousedown', mouseDownHandler, false);
-				loadImage();
+				loadImage(images);
+			}).call();
+
+			function flicker() {
+				setInterval(function() {
+					randomBehaviour.reset(30, 30, 0.001);
+				}, 1000);
 			}
 
-			function addStats() {
-				stats = new Stats();
-				stats.setMode(2);
-				stats.domElement.style.position = 'absolute';
-				stats.domElement.style.left = '0px';
-				stats.domElement.style.top = '0px';
-				document.getElementById('container').appendChild(stats.domElement);
-			}
-
-			function loadImage() {
+			function loadImage(urls) {
 				logoZone = [];
-				var logo = [];
 				var loader = new PxLoader();
-				logo[0] = loader.addImage('google/logo1.png');
-				logo[1] = loader.addImage('google/logo2.png');
+
+				for (var i = 0; i <= urls.length - 1; i++) {
+					logo[i] = loader.addImage(urls[i]);
+				}
 
 				loader.addCompletionListener(function() {
 
-					for (var i = 0; i < 2; i++) {
+					for (var i = 0; i <= urls.length - 1; i++) {
+						var iwidth = logo[i].width > canvas.width ? canvas.width : logo[i].width;
+						var iheight = logo[i].height > canvas.height ? canvas.height : logo[i].height;
+
+						var coords = getImageCoords(iwidth, iheight);
+						rect = new Proton.Rectangle(coords[0], coords[1], iwidth, iheight);
+
 						var imagedata = Proton.Util.getImageData(context, logo[i], rect);
+						
 						logoZone.push(new Proton.ImageZone(imagedata, rect.x, rect.y));
 						imageDatas.push(imagedata);
 					}
-					createProton(rect);
+					createProton();
 					tick();
 				});
 				loader.start();
 			}
 
+			function getImageCoords(width, height) {
+				return [((canvas.width - width) / 2), ((canvas.height - height) / 2)];
+			}
+
 			function createProton() {
 				proton = new Proton;
 				emitter = new Proton.Emitter();
-				emitter.rate = new Proton.Rate(new Proton.Span(3000), new Proton.Span(0.1));
+				emitter.rate = new Proton.Rate(new Proton.Span(5000), new Proton.Span(0.1));
 				emitter.addInitialize(new Proton.Mass(1));
 				emitter.addInitialize(new Proton.P(new Proton.RectZone(rect2.x, rect2.y, rect2.width, rect2.height)));
+				// emitter.addInitialize(new Proton.Radius(6, 10));
 
 				emitter.addBehaviour(randomBehaviour);
-				emitter.addBehaviour(customToZoneBehaviour(logoZone[0], logoZone[1]));
+				emitter.addBehaviour(customToZoneBehaviour(logoZone));
 				emitter.addBehaviour(crossBehaviour);
-				emitter.addBehaviour(gravityWellBehaviour);
 
 				emitter.emit('once');
 				proton.addEmitter(emitter);
@@ -120,13 +127,19 @@
 				renderer.start();
 			}
 
-			function customToZoneBehaviour(zone1, zone2) {
+			function customToZoneBehaviour(zones) {
 				return {
 					initialize : function(particle) {
-						particle.R = Math.random() * 10;
+						particle.R = Math.random() * 15;
 						particle.Angle = Math.random() * Math.PI * 2;
 						particle.speed = Math.random() * (-2) + 1;
-						particle.zones = [zone1.getPosition().clone(), zone2.getPosition().clone()];
+
+						var zoneArray = [];
+						for (var i = 0; i <= zones.length - 1; i++) {
+							zoneArray.push(zones[i].getPosition().clone());
+						}
+
+						particle.zones = zoneArray;	
 						particle.colors = getColor(particle.zones);
 					},
 
@@ -134,7 +147,7 @@
 						if (rootIndex % 2 != 0) {
 							particle.v.clear();
 							particle.Angle += particle.speed;
-							var index = (rootIndex % 4 + 1) / 2 - 1;
+							var index = (rootIndex % 100 + 1) / 2 - 1;
 							var x = particle.zones[index].x + particle.R * Math.cos(particle.Angle);
 							var y = particle.zones[index].y + particle.R * Math.sin(particle.Angle);
 							particle.p.x += (x - particle.p.x) * 0.05;
@@ -157,30 +170,28 @@
 			}
 
 			function mouseDownHandler(e) {
-				rootIndex++;
-				if (rootIndex % 2 == 0) {
-					if (rootIndex % 4 == 2)
-						randomBehaviour.reset(30, 30, 0.001);
-					else
-						gravityWellBehaviour.reset({
-							x : canvas.width / 2,
-							y : canvas.height / 2
-						}, 3000, 500);
+				if (rootIndex % 2 == 0) { 
+					randomBehaviour.reset(30, 30, 0.001);
 				} else {
 					randomBehaviour.reset(0, 0, 0.001);
-					gravityWellBehaviour.reset({
-						x : canvas.width / 2,
-						y : canvas.height / 2
-					}, 0, 0);
+
+					context.drawImage(logo[1],canvas.width / 2,canvas.height / 2, 500, 500);
+					console.log(logo[1]);
 				}
+
+				if (rootIndex >= images.length * 2) rootIndex = 0;
+
+				console.log(rootIndex);
+
+				rootIndex++;
 			}
 
 			function tick() {
 				requestAnimationFrame(tick);
 
-				stats.begin();
+				//stats.begin();
 				proton.update();
-				stats.end();
+				//stats.end();
 			}
 		</script>
 	</body>

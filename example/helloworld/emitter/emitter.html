@@ -28,8 +28,7 @@
 			var emitter;
 			var stats;
 
-			Main();
-			function Main() {
+			(function Main() {
 				canvas = document.getElementById("testCanvas");
 				canvas.width = window.innerWidth;
 				canvas.height = window.innerHeight;
@@ -44,7 +43,7 @@
 					emitter.p.x = canvas.width / 2;
 					emitter.p.y = canvas.height / 2;
 				}
-			}
+			}).call();
 
 			function addStats() {
 				stats = new Stats();
@@ -58,12 +57,12 @@
 			function createProton() {
 				proton = new Proton();
 				emitter = new Proton.Emitter();
-				emitter.rate = new Proton.Rate(new Proton.Span(10, 20), new Proton.Span(.1, .25));
-				emitter.addInitialize(new Proton.Mass(1));
-				emitter.addInitialize(new Proton.Radius(1, 12));
-				emitter.addInitialize(new Proton.Life(2, 4));
-				emitter.addInitialize(new Proton.Velocity(new Proton.Span(2, 4), new Proton.Span(-30, 30), 'polar'));
-				emitter.addBehaviour(new Proton.RandomDrift(30, 30, .05));
+				emitter.rate = new Proton.Rate(new Proton.Span(1, 5), new Proton.Span(.2, .5)); // proton span (from, to) - per sec i think //second param seems to define the delay for the emitter
+				emitter.addInitialize(new Proton.Mass(10)); //the mass of the proton defines how heavy it is
+				emitter.addInitialize(new Proton.Radius(.5, 5)); // the radius of the particles
+				emitter.addInitialize(new Proton.Life(1, 7)); //lifespan - in from-to in secs i think
+				emitter.addInitialize(new Proton.Velocity(new Proton.Span(1, 5), new Proton.Span(-10, 2), 'polar')); //speed, acceleration - don't get the second param yet
+				emitter.addBehaviour(new Proton.RandomDrift(1, 100, .1)); //randomness to the movement patterns - last param seems to define the start tick
 				emitter.addBehaviour(new Proton.Color('ff0000', 'random', Infinity, Proton.easeOutQuart));
 				emitter.addBehaviour(new Proton.Scale(1, 0.7));
 				emitter.p.x = canvas.width / 2;
@@ -84,6 +83,10 @@
 
 				stats.begin();
 				emitter.rotation += 1.5;
+				emitter.p.x += 2;
+				emitter.p.y += 3.5;
+				if(emitter.p.x >= window.innerWidth) emitter.p.x = 0;
+				if(emitter.p.y >= window.innerHeight) emitter.p.y = 0;
 				proton.update();
 				stats.end();
 			}
