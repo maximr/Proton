@@ -11,10 +11,8 @@
 				overflow: hidden;
 			}
 			#container {
-				width: 1003px;
-				margin-top: 50px;
-				margin-left: -501px;
-				left: 50%;
+				width: 100vw;
+				height: 100vh;
 				position: absolute;
 			}
 
@@ -40,17 +38,16 @@
 			var randomBehaviour;
 			var gravity;
 			
-			Main();
-			function Main() {
+			(function Main() {
 				canvas = document.getElementById("testCanvas");
-				canvas.width = 1003;
-				canvas.height = 610;
+				canvas.width = window.innerWidth;
+				canvas.height = window.innerHeight;
 				context = canvas.getContext('2d');
 				context.globalCompositeOperation = "lighter";
 				addStats();
 
-				loadImage();
-			}
+				loadImage('image/logo.png');
+			}).call();
 
 			function addStats() {
 				stats = new Stats();
@@ -61,7 +58,7 @@
 				document.getElementById('container').appendChild(stats.domElement);
 			}
 
-			function loadImage() {
+			function loadImage(img_src) {
 				var image = new Image()
 				image.onload = function(e) {
 					var rect = new Proton.Rectangle((canvas.width - e.target.width) / 2, (canvas.height - e.target.height) / 2, e.target.width, e.target.height);
@@ -69,18 +66,18 @@
 					createProton(rect);
 					tick();
 				}
-				image.src = 'image/logo.png';
+				image.src = img_src;
 			}
 
 			function createProton(rect) {
 				proton = new Proton;
 				emitter = new Proton.Emitter();
 				//setRate
-				emitter.rate = new Proton.Rate(new Proton.Span(11, 15), new Proton.Span(.02));
+				emitter.rate = new Proton.Rate(new Proton.Span(20, 45), new Proton.Span(.15));
 				//addInitialize
 				emitter.addInitialize(new Proton.Position(new Proton.PointZone(0, 0)));
 				emitter.addInitialize(new Proton.Mass(1));
-				emitter.addInitialize(new Proton.Radius(6, 10));
+				emitter.addInitialize(new Proton.Radius(1, 10));
 				emitter.addInitialize(new Proton.Life(2));
 				var imagedata = context.getImageData(rect.x, rect.y, rect.width, rect.height);
 				emitter.addInitialize(new Proton.P(new Proton.ImageZone(imagedata, rect.x, rect.y + 50)));
@@ -91,7 +88,7 @@
 				emitter.addBehaviour(customScaleBehaviour());
 				emitter.addBehaviour(gravity);
 				emitter.addBehaviour(randomBehaviour);
-				emitter.addBehaviour(new Proton.Color(['#00aeff', '#0fa954', '#54396e', '#e61d5f']));
+				emitter.addBehaviour(new Proton.Color(['#254670', '#9e4f6c', '#3a6a7e', '#3c003e']));
 				emitter.addBehaviour(new Proton.CrossZone(new Proton.RectZone(0, 0, canvas.width, canvas.height), 'collision'));
 				emitter.emit();
 				//add emitter

@@ -22,7 +22,7 @@
 			}
 
 			#testCanvas {
-				background: #000;
+				background: #fff;
 			}
 
 		</style>
@@ -48,13 +48,14 @@
 			var rootIndex = 1;
 			var images = [];
 			var logo = [];
+			var emitter_rate;
 
 			(function Main() {
 				canvas = document.getElementById("testCanvas");
 				canvas.width = window.innerWidth;
 				canvas.height = window.innerHeight;
 				context = canvas.getContext('2d');
-				images = ['google/logo1.png', 'google/logo2.png', 'google/logo3.png', 'google/logo4.png'];
+				images = ['google/are.png', 'google/you.png', 'google/ready.png', 'google/to.png', 'google/shape.png', 'google/the.png', 'google/future.png', 'google/question.png', 'google/logo.png'];
 
 				imageDatas = [];
 
@@ -110,21 +111,96 @@
 			function createProton() {
 				proton = new Proton;
 				emitter = new Proton.Emitter();
-				emitter.rate = new Proton.Rate(new Proton.Span(5000), new Proton.Span(0.1));
+				//emitter.rate = new Proton.Rate(new Proton.Span(3000), new Proton.Span(0.1));
+				emitter_rate = new Proton.Rate(new Proton.Span(40, 55), new Proton.Span(.2));
+
+				emitter.rate = emitter_rate;
+				emitter.addInitialize(new Proton.P(new Proton.LineZone(10, canvas.height, canvas.width - 10, canvas.height)));
+
 				emitter.addInitialize(new Proton.Mass(1));
 				emitter.addInitialize(new Proton.P(new Proton.RectZone(rect2.x, rect2.y, rect2.width, rect2.height)));
-				// emitter.addInitialize(new Proton.Radius(6, 10));
+				emitter.addInitialize(new Proton.Radius(.4, 4));
+				emitter.addInitialize(new Proton.Life(1,7));
 
 				emitter.addBehaviour(randomBehaviour);
 				emitter.addBehaviour(customToZoneBehaviour(logoZone));
 				emitter.addBehaviour(crossBehaviour);
 
-				emitter.emit('once');
+				//emitter.emit('once');
+				emitter.emit();
 				proton.addEmitter(emitter);
 
-				renderer = new Proton.Renderer('pixel', proton, canvas);
+				renderer = new Proton.Renderer('canvas', proton, canvas);
 				renderer.createImageData(rect2);
 				renderer.start();
+
+				emitter.addEventListener(Proton.PARTICLE_DEAD, function(particle) {
+					createSecondEmitter(particle);
+				});
+			}
+
+			function createSecondEmitter(particle) {
+				var subemitter = new Proton.Emitter();
+				subemitter.rate = new Proton.Rate(new Proton.Span(4, 8), .8);
+				subemitter.addInitialize(new Proton.Mass(1));
+				subemitter.addInitialize(new Proton.Radius(1, 6.5));
+				subemitter.addInitialize(new Proton.Life(3, 5));
+				//subemitter.addInitialize(new Proton.Position(new Proton.PointZone(0, 0)));
+				//subemitter.addInitialize(new Proton.V(new Proton.Span(.5, 100), new Proton.Span(0, 0), 'polar'));
+
+				//subemitter.addInitialize(new Proton.ImageTarget('image/particle.png', 32));
+
+				//subemitter.addInitialize(new Proton.V(new Proton.Span(0, .05), 0, 'linear'));
+				//subemitter.addInitialize(new Proton.V([.1, .2], new Proton.Span(0, 360), 'vector'));
+				//subemitter.addBehaviour(new Proton.Alpha(1, 0));
+				//subemitter.addBehaviour(new Proton.Scale(1, .1));
+				//subemitter.addBehaviour(new Proton.Gravity(100));
+				subemitter.addBehaviour(new Proton.RandomDrift(0, 0, 0.001));
+				subemitter.addBehaviour(customToZoneBehaviourTwo(logoZone));
+				subemitter.addBehaviour(crossBehaviour);
+
+				//var color = Proton.MathUtils.randomColor();
+				//subemitter.addBehaviour(new Proton.Color(color));
+				subemitter.p.x = particle.p.x;
+				subemitter.p.y = particle.p.y;
+				subemitter.emit('once', true);
+				proton.addEmitter(subemitter);
+			}
+
+			function customToZoneBehaviourTwo(zones) {
+				return {
+					initialize : function(particle) {
+						particle.R = Math.random() * 5;
+						particle.Angle = Math.random() * Math.PI * 2;
+						particle.speed = Math.random() * (-2) + 1;
+
+						var zoneArray = [];
+						for (var i = 0; i <= zones.length - 1; i++) {
+							zoneArray.push(zones[i].getPosition().clone());
+						}
+
+						particle.zones = zoneArray;	
+						particle.colors = getColor(particle.zones);
+					},
+
+					applyBehaviour : function(particle) {
+						if (rootIndex % 2 != 0) {
+							particle.v.clear();
+							particle.Angle += particle.speed;
+							var index = (rootIndex % 100 + 1) / 2 - 1;
+							var x = particle.zones[index].x + particle.R * Math.cos(particle.Angle);
+							var y = particle.zones[index].y + particle.R * Math.sin(particle.Angle);
+							particle.p.x += (x - particle.p.x) * 0.5;
+							particle.p.y += (y - particle.p.y) * 0.5;
+
+							particle.transform.rgb.r = particle.colors[index].r;
+							particle.transform.rgb.g = particle.colors[index].g;
+							particle.transform.rgb.b = particle.colors[index].b;
+						} else {
+							particle.destroy();
+						}
+					}
+				}
 			}
 
 			function customToZoneBehaviour(zones) {
@@ -174,9 +250,6 @@
 					randomBehaviour.reset(30, 30, 0.001);
 				} else {
 					randomBehaviour.reset(0, 0, 0.001);
-
-					context.drawImage(logo[1],canvas.width / 2,canvas.height / 2, 500, 500);
-					console.log(logo[1]);
 				}
 
 				if (rootIndex >= images.length * 2) rootIndex = 0;

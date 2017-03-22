@@ -73,6 +73,7 @@
 
 				////NOTICE :you can only use two emitters do this effect.In this demo I use more emitters want to test the emtter's life
 				emitter.addEventListener(Proton.PARTICLE_DEAD, function(particle) {
+					console.log("nooow");
 					if (Math.random() < .7)
 						createFirstEmitter(particle);
 					else
