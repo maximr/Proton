@@ -44,18 +44,21 @@
 			var emitter;
 			var imageDatas;
 			var rect, rect2;
-			var gravityBehaviour, randomBehaviour;
+			var gravityBehaviour, randomBehaviour, randomBehaviourTwo;
 			var rootIndex = 1;
 			var images = [];
 			var logo = [];
 			var emitter_rate;
+			var switchTimoutOver = false;
+			var switchTimoutOverTwo = false;
+			var particleCount = 0;
 
 			(function Main() {
 				canvas = document.getElementById("testCanvas");
 				canvas.width = window.innerWidth;
 				canvas.height = window.innerHeight;
 				context = canvas.getContext('2d');
-				images = ['google/are.png', 'google/you.png', 'google/ready.png', 'google/to.png', 'google/shape.png', 'google/the.png', 'google/future.png', 'google/question.png', 'google/logo.png'];
+				images = ['google/are.png', 'google/you.png', 'google/ready.png', 'google/to.png', 'google/shape.png', 'google/the.png', 'google/future.png', 'google/question.png', 'google/logo.png', 'google/test.png'];
 
 				imageDatas = [];
 
@@ -63,6 +66,7 @@
 				rect2 = new Proton.Rectangle(0, 0, canvas.width, canvas.height);
 
 				randomBehaviour = new Proton.RandomDrift(30, 30, 0.001);
+				randomBehaviourTwo = new Proton.RandomDrift(0, 0, 0);
 				var rectZone = new Proton.RectZone(rect2.x, rect2.y, rect2.width, rect2.height);
 				crossBehaviour = new Proton.CrossZone(rectZone, 'bound');
 
@@ -70,18 +74,12 @@
 				loadImage(images);
 			}).call();
 
-			function flicker() {
-				setInterval(function() {
-					randomBehaviour.reset(30, 30, 0.001);
-				}, 1000);
-			}
-
 			function loadImage(urls) {
 				logoZone = [];
 				var loader = new PxLoader();
 
 				for (var i = 0; i <= urls.length - 1; i++) {
-					logo[i] = loader.addImage(urls[i]);
+					logo[i] = loader.addImage(urls[i], {width: window.innerWidth});
 				}
 
 				loader.addCompletionListener(function() {
@@ -94,6 +92,7 @@
 						rect = new Proton.Rectangle(coords[0], coords[1], iwidth, iheight);
 
 						var imagedata = Proton.Util.getImageData(context, logo[i], rect);
+						console.log(imagedata);
 						
 						logoZone.push(new Proton.ImageZone(imagedata, rect.x, rect.y));
 						imageDatas.push(imagedata);
@@ -110,6 +109,7 @@
 
 			function createProton() {
 				proton = new Proton;
+				window.proton = proton;
 				emitter = new Proton.Emitter();
 				//emitter.rate = new Proton.Rate(new Proton.Span(3000), new Proton.Span(0.1));
 				emitter_rate = new Proton.Rate(new Proton.Span(40, 55), new Proton.Span(.2));
@@ -117,14 +117,16 @@
 				emitter.rate = emitter_rate;
 				emitter.addInitialize(new Proton.P(new Proton.LineZone(10, canvas.height, canvas.width - 10, canvas.height)));
 
-				emitter.addInitialize(new Proton.Mass(1));
+				emitter.addInitialize(new Proton.Mass(3.5));
+				emitter.addBehaviour(new Proton.Alpha(.6, .15));
 				emitter.addInitialize(new Proton.P(new Proton.RectZone(rect2.x, rect2.y, rect2.width, rect2.height)));
 				emitter.addInitialize(new Proton.Radius(.4, 4));
-				emitter.addInitialize(new Proton.Life(1,7));
+				emitter.addInitialize(new Proton.Life(1.5,8));
 
 				emitter.addBehaviour(randomBehaviour);
 				emitter.addBehaviour(customToZoneBehaviour(logoZone));
 				emitter.addBehaviour(crossBehaviour);
+				//emitter.addBehaviour(new Proton.Color('#000'));
 
 				//emitter.emit('once');
 				emitter.emit();
@@ -136,31 +138,30 @@
 
 				emitter.addEventListener(Proton.PARTICLE_DEAD, function(particle) {
 					createSecondEmitter(particle);
+					particle.destroy();
 				});
 			}
 
 			function createSecondEmitter(particle) {
 				var subemitter = new Proton.Emitter();
-				subemitter.rate = new Proton.Rate(new Proton.Span(4, 8), .8);
-				subemitter.addInitialize(new Proton.Mass(1));
-				subemitter.addInitialize(new Proton.Radius(1, 6.5));
-				subemitter.addInitialize(new Proton.Life(3, 5));
-				//subemitter.addInitialize(new Proton.Position(new Proton.PointZone(0, 0)));
-				//subemitter.addInitialize(new Proton.V(new Proton.Span(.5, 100), new Proton.Span(0, 0), 'polar'));
-
+				subemitter.rate = new Proton.Rate(new Proton.Span(5, 20), .8);
+				subemitter.addInitialize(new Proton.Mass(3));
+				subemitter.addInitialize(new Proton.Radius(2.7, 6.5));
+				subemitter.addInitialize(new Proton.Life(2.1, 7.6));
 				//subemitter.addInitialize(new Proton.ImageTarget('image/particle.png', 32));
 
-				//subemitter.addInitialize(new Proton.V(new Proton.Span(0, .05), 0, 'linear'));
+				subemitter.addInitialize(new Proton.V(new Proton.Span(0, .05), 0, 'polar'));
 				//subemitter.addInitialize(new Proton.V([.1, .2], new Proton.Span(0, 360), 'vector'));
-				//subemitter.addBehaviour(new Proton.Alpha(1, 0));
+				subemitter.addBehaviour(new Proton.Alpha(.85, .25));
 				//subemitter.addBehaviour(new Proton.Scale(1, .1));
 				//subemitter.addBehaviour(new Proton.Gravity(100));
-				subemitter.addBehaviour(new Proton.RandomDrift(0, 0, 0.001));
+
+				subemitter.addBehaviour(randomBehaviourTwo);
 				subemitter.addBehaviour(customToZoneBehaviourTwo(logoZone));
 				subemitter.addBehaviour(crossBehaviour);
+				subemitter.addBehaviour(new Proton.Gravity(3));
+				subemitter.addBehaviour(new Proton.Collision(subemitter));
 
-				//var color = Proton.MathUtils.randomColor();
-				//subemitter.addBehaviour(new Proton.Color(color));
 				subemitter.p.x = particle.p.x;
 				subemitter.p.y = particle.p.y;
 				subemitter.emit('once', true);
@@ -185,19 +186,34 @@
 
 					applyBehaviour : function(particle) {
 						if (rootIndex % 2 != 0) {
+							particleCount = 0;
 							particle.v.clear();
+							particle.speed = 0.01;
 							particle.Angle += particle.speed;
 							var index = (rootIndex % 100 + 1) / 2 - 1;
 							var x = particle.zones[index].x + particle.R * Math.cos(particle.Angle);
 							var y = particle.zones[index].y + particle.R * Math.sin(particle.Angle);
-							particle.p.x += (x - particle.p.x) * 0.5;
-							particle.p.y += (y - particle.p.y) * 0.5;
+
+							if(!switchTimoutOverTwo) { 
+								particle.p.x += (x - particle.p.x) * 0.1;
+								particle.p.y += (y - particle.p.y) * 0.1;
+							} else {
+								particle.p.x += (x - particle.p.x) * 0.5;
+								particle.p.y += (y - particle.p.y) * 0.75;
+							}
 
 							particle.transform.rgb.r = particle.colors[index].r;
 							particle.transform.rgb.g = particle.colors[index].g;
 							particle.transform.rgb.b = particle.colors[index].b;
 						} else {
-							particle.destroy();
+							particleCount += 1;
+							if(particleCount % 35 == 0) {
+								particle.destroy();
+							} else {
+								particle.speed += 5;
+								particle.Angle += particle.speed;
+								randomBehaviourTwo.reset(70, 70, 0.001);
+							}
 						}
 					}
 				}
@@ -228,9 +244,20 @@
 							var y = particle.zones[index].y + particle.R * Math.sin(particle.Angle);
 							particle.p.x += (x - particle.p.x) * 0.05;
 							particle.p.y += (y - particle.p.y) * 0.05;
-							particle.transform.rgb.r = particle.colors[index].r;
-							particle.transform.rgb.g = particle.colors[index].g;
-							particle.transform.rgb.b = particle.colors[index].b;
+
+							particle.transform.rgb.r = 0;
+							particle.transform.rgb.g = 0;
+							particle.transform.rgb.b = 0;
+						} else {
+							if(!switchTimoutOver) {
+								var index = Math.round((rootIndex % 100 + 1) / 2 - 1) -1;
+								var x = particle.zones[index].x + particle.R * Math.cos(particle.Angle);
+								var y = particle.zones[index].y + particle.R * Math.sin(particle.Angle);
+
+								particle.transform.rgb.r = particle.colors[index].r;
+								particle.transform.rgb.g = particle.colors[index].g;
+								particle.transform.rgb.b = particle.colors[index].b;
+							}
 						}
 					}
 				}
@@ -247,9 +274,19 @@
 
 			function mouseDownHandler(e) {
 				if (rootIndex % 2 == 0) { 
+					switchTimoutOver = false;
+					switchTimoutOverTwo = false;
 					randomBehaviour.reset(30, 30, 0.001);
+					setTimeout(function() {
+						switchTimoutOverTwo = true;
+					}, 2200);
 				} else {
+					switchTimoutOver = false;
+					switchTimoutOverTwo = false;
 					randomBehaviour.reset(0, 0, 0.001);
+					setTimeout(function() {
+						switchTimoutOver = true;
+					}, 500);
 				}
 
 				if (rootIndex >= images.length * 2) rootIndex = 0;
